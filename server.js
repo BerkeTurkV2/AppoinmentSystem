@@ -28,10 +28,26 @@ app.get('/randevular', (req, res) => {
 // Yeni randevu kaydetme
 app.post('/randevu', (req, res) => {
     const { name, surname, date, time, description } = req.body;
-    // Veriyi randevular dizisine ekleyelim
-    randevular.push({ name, surname, date, time, description });
-    res.redirect('/randevular');  // Randevular sayfasına yönlendir
+    const id = Date.now().toString(); // Randevuya benzersiz bir ID veriyoruz.
+    randevular.push({ id, name, surname, date, time, description });
+    res.json({ message: "Başarılı" }); // JSON formatında yanıt
 });
+
+// Randevu silme
+app.delete('/randevu/:id', (req, res) => {
+    const id = req.params.id;
+    const initialLength = randevular.length;
+    
+    // Randevular listesinden belirtilen ID'yi bulup silin
+    randevular = randevular.filter(appointment => appointment.id !== id);
+    
+    if (randevular.length < initialLength) {
+        res.sendStatus(200);  // Başarılı yanıt gönder
+    } else {
+        res.status(404).send('Randevu bulunamadı');  // Randevu bulunamadığında hata yanıtı gönder
+    }
+});
+
 
 // Sunucu başlatma
 app.listen(port, () => {
