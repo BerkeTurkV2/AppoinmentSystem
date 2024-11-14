@@ -27,9 +27,9 @@ app.get('/randevular', (req, res) => {
 
 // Yeni randevu kaydetme
 app.post('/randevu', (req, res) => {
-    const { name, surname, date, description } = req.body;
+    const { name, surname, date, time, description } = req.body;
     // Veriyi randevular dizisine ekleyelim
-    randevular.push({ name, surname, date, description });
+    randevular.push({ name, surname, date, time, description });
     res.redirect('/randevular');  // Randevular sayfasına yönlendir
 });
 

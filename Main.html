@@ -109,6 +109,7 @@
             const name = document.getElementById('name').value;
             const surname = document.getElementById('surname').value;
             const date = document.getElementById('date').value;
+            const time = document.getElementById('time').value;
             const description = document.getElementById('description').value;
 
             // Veriyi POST ile Express sunucusuna gönder
@@ -117,7 +118,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ name, surname, date, description })
+                body: JSON.stringify({ name, surname, date, time, description })
             })
                 .then(response => response.json())
                 .then(data => {
@@ -139,7 +140,7 @@
                     appointmentsList.innerHTML = '';  // Mevcut listeyi temizle
                     data.forEach(appointment => {
                         const li = document.createElement('li');
-                        li.textContent = `${appointment.name} ${appointment.surname} - ${appointment.date} - ${appointment.description}`;
+                        li.textContent = `${appointment.name} ${appointment.surname} - ${appointment.date} - ${appointment.time} - ${appointment.description}`;
                         appointmentsList.appendChild(li);
                     });
                 })
