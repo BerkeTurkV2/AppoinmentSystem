@@ -6,21 +6,9 @@
     "password": "123"
   },
   {
-    "firstName": "Test",
-    "lastName": "test",
-    "username": "test",
+    "firstName": "lord",
+    "lastName": "kedi",
+    "username": "lordkedi",
     "password": "12345"
-  },
-  {
-    "firstName": "test1",
-    "lastName": "test",
-    "username": "test1",
-    "password": "123"
-  },
-  {
-    "firstName": "test2",
-    "lastName": "test2",
-    "username": "test2",
-    "password": "123"
   }
 ]

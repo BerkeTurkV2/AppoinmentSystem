@@ -35,22 +35,28 @@
             <h2 class="text-center mb-4">Kayıt Ol</h2>
             <div class="mb-3">
                 <label for="firstName" class="form-label fs-5">İsim</label>
-                <input type="text" class="form-control" id="firstName" name="firstName" placeholder="İsminizi girin" required>
+                <input type="text" class="form-control" id="firstName" name="firstName" placeholder="İsminizi girin"
+                    required>
             </div>
             <div class="mb-3">
                 <label for="lastName" class="form-label fs-5">Soyisim</label>
-                <input type="text" class="form-control" id="lastName" name="lastName" placeholder="Soyisminizi girin" required>
+                <input type="text" class="form-control" id="lastName" name="lastName" placeholder="Soyisminizi girin"
+                    required>
             </div>
             <div class="mb-3">
                 <label for="username" class="form-label fs-5">Kullanıcı Adı</label>
-                <input type="text" class="form-control" id="username" name="username" placeholder="Kullanıcı adınızı girin" required>
+                <input type="text" class="form-control" id="username" name="username"
+                    placeholder="Kullanıcı adınızı girin" required>
             </div>
             <div class="mb-3">
                 <label for="password" class="form-label fs-5">Şifre</label>
-                <input type="password" class="form-control" id="password" name="password" placeholder="Şifrenizi girin" required>
+                <input type="password" class="form-control" id="password" name="password" placeholder="Şifrenizi girin"
+                    required>
             </div>
             <button type="submit" class="btn btn-dark w-100 mt-4 fs-5">Kayıt Ol</button>
-            <div id="error-message" class="text-danger mt-3"></div>
+            <div class="text-center mt-3">
+                <p>Zaten hesabın var mı? <a href="Login.html" class="text-dark fw-bold fs-5 ps-2">Giriş Yap</a></p>
+                <div id="error-message" class="text-danger mt-3"></div>
         </form>
     </div>
     <script>

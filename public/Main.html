@@ -144,16 +144,22 @@
                     document.getElementById('appointment-form').reset();
                     // Başarılı olduğunda randevuları getir
                     getAppointments();
-
+                    
                     showPage('main');
                 })
                 .catch(error => console.error('Error:', error));
+                console.log('Session Burada ne var?:', req.session); // Oturum detaylarını logla
         });
 
         // Randevuları GET ile alıp sayfada göster
         function getAppointments() {
             fetch('/randevular')
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Giriş yapmanız gerekiyor!");
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     const appointmentsList = document.querySelector('#appointments-list tbody');
                     appointmentsList.innerHTML = '';  // Mevcut tabloyu temizle
