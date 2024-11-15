@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giriş Yap</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        body {
+            background-color: #343a40;
+            color: #ffffff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .form-container {
+            background-color: #495057;
+            padding: 2rem;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 500px;
+        }
+    </style>
+</head>
+
+<body class="bg-dark">
+    <h2 class="text-center mb-4">Hastane Randevu Sistemi</h2>
+    <div class="form-container">
+        <form>
+            <h2 class="text-center mb-4">Giriş Yap</h2>
+            <div class="mb-3">
+                <label for="username" class="form-label fs-5">Kullanıcı Adı</label>
+                <input type="text" class="form-control" id="username" name="username" placeholder="Kullanıcı adınızı girin" required>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label fs-5">Şifre</label>
+                <input type="password" class="form-control" id="password" name="password" placeholder="Şifrenizi girin" required>
+            </div>
+            <button type="submit" class="btn btn-dark w-100 mt-4 fs-5">Giriş Yap</button>
+            <div id="error-message" class="text-danger mt-3"></div>
+        </form>
+    </div>
+    <script>
+        const form = document.querySelector("form");
+        const errorMessage = document.getElementById("error-message");
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            try {
+                const response = await fetch("/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data),
+                });
+
+                if (!response.ok) {
+                    const { error } = await response.json();
+                    errorMessage.textContent = error; // Hata mesajını göster
+                    return;
+                }
+
+                // Başarılı işlem sonrası anasayfaya yönlendir
+                window.location.href = "/Main.html";
+            } catch (error) {
+                errorMessage.textContent = "Bir hata oluştu. Lütfen tekrar deneyin.";
+            }
+        });
+    </script>
+</body>
+
+</html>
