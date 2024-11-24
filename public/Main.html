@@ -122,83 +122,90 @@
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('date').setAttribute('min', today);
 
-        document.getElementById('appointment-form').addEventListener('submit', function (event) {
-            event.preventDefault();  // Formun sayfayı yeniden yüklemesini engeller
+        //Yeni randevuları kaydetme kısmı
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('appointment-form');
+            if (form) {
+                form.addEventListener('submit', function (event) {
 
-            const name = document.getElementById('name').value;
-            const surname = document.getElementById('surname').value;
-            const date = document.getElementById('date').value;
-            const time = document.getElementById('time').value;
-            const description = document.getElementById('description').value;
+                    const name = document.getElementById('name').value;
+                    const surname = document.getElementById('surname').value;
+                    const date = document.getElementById('date').value;
+                    const time = document.getElementById('time').value;
+                    const description = document.getElementById('description').value;
 
-            // Veriyi POST ile Express sunucusuna gönder
-            fetch('/randevu', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ name, surname, date, time, description })
-            })
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('appointment-form').reset();
-                    // Başarılı olduğunda randevuları getir
-                    getAppointments();
-                    
-                    showPage('main');
-                })
-                .catch(error => console.error('Error:', error));
-                console.log('Session Burada ne var?:', req.session); // Oturum detaylarını logla
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/randevu', true);
+                    xhr.setRequestHeader('Content-Type', 'application/json');
+                    xhr.onreadystatechange = function () {
+                        if (xhr.readyState === 4) {
+                            if (xhr.status === 200) {
+                                form.reset();
+                                //document.getElementById('appointment-form').reset();
+                                getAppointments();
+                                showPage('main');
+                            } else {
+                                console.error("Hata:", xhr.responseText);
+                            }
+                        }
+                    };
+                    xhr.onerror = function () {
+                        console.error("Bir ağ hatası oluştu!");
+                    };
+                    xhr.send(JSON.stringify({ name, surname, date, time, description }));
+                });
+            }
         });
+
+
 
         // Randevuları GET ile alıp sayfada göster
         function getAppointments() {
-            fetch('/randevular')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error("Giriş yapmanız gerekiyor!");
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', '/randevular', true);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        const data = JSON.parse(xhr.responseText);
+                        const appointmentsList = document.querySelector('#appointments-list tbody');
+                        appointmentsList.innerHTML = '';
+
+                        data.forEach(appointment => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                        <td>${appointment.name}</td>
+                        <td>${appointment.surname}</td>
+                        <td>${appointment.date}</td>
+                        <td>${appointment.time}</td>
+                        <td>${appointment.description}</td>
+                        <button type="button" class="btn btn-danger btn-sm ms-2 mb-2 mt-2" onclick="deleteAppointment('${appointment.id}')">
+                            🗑️
+                        </button>
+                    `;
+                            appointmentsList.appendChild(row);
+                        });
+                    } else {
+                        console.error("Hata:", xhr.responseText);
                     }
-                    return response.json();
-                })
-                .then(data => {
-                    const appointmentsList = document.querySelector('#appointments-list tbody');
-                    appointmentsList.innerHTML = '';  // Mevcut tabloyu temizle
-
-                    data.forEach(appointment => {
-                        // Yeni bir tablo satırı oluştur
-                        const row = document.createElement('tr');
-
-                        // Randevu bilgilerini hücrelere ekle
-                        row.innerHTML = `
-                            <td>${appointment.name}</td>
-                            <td>${appointment.surname}</td>
-                            <td>${appointment.date}</td>
-                            <td>${appointment.time}</td>
-                            <td>${appointment.description}</td>
-                                <button type="button" class="btn btn-danger btn-sm ms-2 mb-2 mt-2" onclick="deleteAppointment('${appointment.id}')">
-                                    🗑️
-                                </button>
-                        `;
-
-                        appointmentsList.appendChild(row);
-                    });
-                })
-                .catch(error => console.error('Error:', error));
+                }
+            };
+            xhr.send();
         }
 
         // Randevu silme fonksiyonu
         function deleteAppointment(id) {
-            fetch(`/randevu/${id}`, {
-                method: 'DELETE',
-            })
-                .then(response => {
-                    if (response.ok) {
-                        getAppointments(); // Listeyi güncelle
+            const xhr = new XMLHttpRequest();
+            xhr.open('DELETE', `/randevu/${id}`, true);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        getAppointments(); // Randevu listesini güncelle
                     } else {
-                        console.error('Randevu silinemedi.');
+                        console.error("Randevu silinemedi.");
                     }
-                })
-                .catch(error => console.error('Error:', error));
+                }
+            };
+            xhr.send();
         }
 
     </script>

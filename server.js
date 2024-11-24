@@ -15,7 +15,7 @@ app.use(bodyParser.json());
 app.use(session({
     secret: 'randevu-secret-key',
     resave: false,
-    saveUninitialized: false, // Burası true olabilir test edicem
+    saveUninitialized: true, // Burası true olabilir test edicem
     cookie: {
         maxAge: 24 * 60 * 60 * 1000, // 1 gün
         httpOnly: true
@@ -72,11 +72,13 @@ app.post("/login", (req, res) => {
 
     if (user) {
         req.session.username = username; // Oturumu başlat
+        console.log("Oturum açıldı:", req.session); // Oturum bilgisini loglayalım
         res.json({ message: `Hoş geldin, ${user.firstName}!` });
     } else {
         return res.status(401).json({ error: "Kullanıcı adı veya şifre hatalı!" });
     }
 });
+
 
 const appointmentsFile = path.join(__dirname, "data", "appointments.json");
 
@@ -97,14 +99,16 @@ app.get('/randevular', (req, res) => {
 
 // Yeni randevu kaydetme
 app.post('/randevu', (req, res) => {
-    console.log('Session:', req.session); // Oturum detaylarını logla
+    console.log('Session Kontrol:', req.session);
     if (!req.session.username) {
+        console.error('Yetkisiz erişim!');
         return res.status(401).json({ error: "Lütfen giriş yapın!" });
     }
 
     const { name, surname, date, time, description } = req.body;
-    const id = Date.now().toString(); // Randevuya benzersiz bir ID veriyoruz.
+    const id = Date.now().toString();
     const username = req.session.username;
+
     const newAppointment = { id, name, surname, date, time, description, username };
 
     let appointments = [];
@@ -114,8 +118,10 @@ app.post('/randevu', (req, res) => {
     appointments.push(newAppointment);
     fs.writeFileSync(appointmentsFile, JSON.stringify(appointments, null, 2));
 
+    console.log('Yeni randevu oluşturuldu:', newAppointment);
     res.json({ message: "Başarılı" });
 });
+
 
 // Randevu silme
 app.delete('/randevu/:id', (req, res) => {

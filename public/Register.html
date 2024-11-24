@@ -62,32 +62,30 @@
     <script>
         const form = document.querySelector("form");
         const errorMessage = document.getElementById("error-message");
-
-        form.addEventListener("submit", async (e) => {
+    
+        form.addEventListener("submit", function (e) {
             e.preventDefault();
-
+    
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
-
-            try {
-                const response = await fetch("/register", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(data),
-                });
-
-                if (!response.ok) {
-                    const { error } = await response.json();
-                    errorMessage.textContent = error;
-                    return;
+    
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", "/register", true);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        window.location.href = "/Login.html";
+                    } else {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMessage.textContent = response.error || "Bir hata oluştu.";
+                    }
                 }
-
-                window.location.href = "/Login.html";
-            } catch (error) {
-                errorMessage.textContent = "Bir hata oluştu. Lütfen tekrar deneyin.";
-            }
+            };
+            xhr.send(JSON.stringify(data));
         });
     </script>
+    
 </body>
 
 </html>
