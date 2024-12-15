@@ -43,6 +43,10 @@
                 <input type="password" class="form-control" id="password" name="password" placeholder="Şifrenizi girin"
                     required>
             </div>
+            <div class="form-check mb-3">
+                <input type="checkbox" class="form-check-input" id="rememberMe" name="rememberMe">
+                <label class="form-check-label" for="rememberMe">Beni Hatırla</label>
+            </div>
             <button type="submit" class="btn btn-dark w-100 mt-4 fs-5">Giriş Yap</button>
             <div class="text-center mt-3">
                 <p>Henüz hesabın yok mu? <a href="Register.html" class="text-dark fw-bold fs-5 ps-2">Kayıt Ol</a></p>
@@ -51,35 +55,65 @@
         </form>
     </div>
     <script>
+        // Sayfa yüklendiğinde hatırlanan kullanıcıyı kontrol et
+        document.addEventListener('DOMContentLoaded', function() {
+            const rememberedUser = localStorage.getItem('rememberedUser');
+            if (rememberedUser) {
+                const user = JSON.parse(rememberedUser);
+                document.querySelector('input[name="username"]').value = user.username;
+                document.querySelector('input[name="password"]').value = user.password;
+                document.getElementById('rememberMe').checked = true;
+            }
+        });
+
         const form = document.querySelector("form");
         const errorMessage = document.getElementById("error-message");
 
-        form.addEventListener("submit", async (e) => {
+        form.addEventListener("submit", function (e) {
             e.preventDefault();
 
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
+            const rememberMe = document.getElementById('rememberMe').checked;
 
-            try {
-                const response = await fetch("/login", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(data),
-                });
-
-                if (!response.ok) {
-                    const { error } = await response.json();
-                    errorMessage.textContent = error; // Hata mesajını göster
-                    return;
+            fetch('/api/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data),
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message === 'Giriş başarılı') {
+                    // Kullanıcı bilgilerini localStorage'a kaydet
+                    localStorage.setItem('userName', data.user.name);
+                    localStorage.setItem('userSurname', data.user.surname);
+                    
+                    // Eğer "Beni Hatırla" seçili ise kullanıcı bilgilerini kaydet
+                    if (rememberMe) {
+                        const userToRemember = {
+                            username: form.querySelector('input[name="username"]').value,
+                            password: form.querySelector('input[name="password"]').value
+                        };
+                        localStorage.setItem('rememberedUser', JSON.stringify(userToRemember));
+                    } else {
+                        // Seçili değilse kayıtlı bilgileri temizle
+                        localStorage.removeItem('rememberedUser');
+                    }
+                    
+                    window.location.href = "/Main.html";
+                } else {
+                    errorMessage.textContent = data.message;
                 }
-
-                // Başarılı işlem sonrası anasayfaya yönlendir
-                window.location.href = "/Main.html";
-            } catch (error) {
-                errorMessage.textContent = "Bir hata oluştu. Lütfen tekrar deneyin.";
-            }
+            })
+            .catch(error => {
+                errorMessage.textContent = "Bir hata oluştu: " + error.message;
+            });
         });
     </script>
+
 </body>
 
 </html>

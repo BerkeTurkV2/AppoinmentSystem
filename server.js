@@ -1,150 +1,172 @@
 const express = require('express');
-const bodyParser = require('body-parser');
-const session = require('express-session');
-const fs = require("fs");
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const cookieParser = require('cookie-parser');
+const cors = require('cors');
+const db = require('./config/database');
 const path = require('path');
 
 const app = express();
-const port = 8080;
+const PORT = process.env.PORT || 8080;
+const JWT_SECRET = 'your-secret-key'; 
 
-// Body-parser middleware
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+app.use(express.json());
+app.use(cookieParser());
+app.use(cors());
+app.use(express.static('public'));
 
-// Session middleware
-app.use(session({
-    secret: 'randevu-secret-key',
-    resave: false,
-    saveUninitialized: false, // Burası true olabilir test edicem
-    cookie: {
-        maxAge: 24 * 60 * 60 * 1000, // 1 gün
-        httpOnly: true
-    }
-}));
-
-// Static files (HTML, CSS, JS)
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Geçici kullanıcı veritabanı
-const usersFile = path.join(__dirname, "data", "users.json");
-
-// Ana sayfa
+// Ana sayfa - Login.html'i göster
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, "public", 'Login.html'));
+    res.sendFile(path.join(__dirname, 'public', 'Login.html'));
 });
 
-// Kayıt Ol
-app.post("/register", (req, res) => {
-    const { firstName, lastName, username, password } = req.body;
-
-    console.log(req.body);
-
-    if (!firstName || !lastName || !username || !password) {
-        return res.status(400).json({ error: "Tüm alanları doldurun!" });
+// JWT token doğrulama middleware'i
+const authenticateToken = (req, res, next) => {
+    const token = req.cookies.token || req.headers['authorization']?.split(' ')[1];
+    
+    if (!token) {
+        return res.status(401).json({ message: 'Yetkilendirme gerekli' });
     }
 
-    const users = JSON.parse(fs.readFileSync(usersFile, "utf-8"));
-
-    // Kullanıcı adı kontrolü
-    if (users.some(user => user.username === username)) {
-        return res.status(400).json({ error: "Bu kullanıcı adı zaten mevcut!" });
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch (error) {
+        return res.status(403).json({ message: 'Geçersiz token' });
     }
+};
 
-    // Yeni kullanıcı ekleme
-    users.push({ firstName, lastName, username, password });
-    fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
-
-    res.redirect("/Login.html");
-});
-
-// Giriş Yap
-app.post("/login", (req, res) => {
-    const { username, password } = req.body;
-
-    if (!username || !password) {
-        return res.status(400).json({ error: "Kullanıcı adı ve şifre gerekli!" });
-    }
-
-    const users = JSON.parse(fs.readFileSync(usersFile, "utf-8"));
-
-    // Kullanıcı doğrulama
-    const user = users.find(user => user.username === username && user.password === password);
-
-    if (user) {
-        req.session.username = username; // Oturumu başlat
-        res.json({ message: `Hoş geldin, ${user.firstName}!` });
-    } else {
-        return res.status(401).json({ error: "Kullanıcı adı veya şifre hatalı!" });
-    }
-});
-
-const appointmentsFile = path.join(__dirname, "data", "appointments.json");
-
-// Randevularımı göster sayfası
-app.get('/randevular', (req, res) => {
-    if (!req.session.username) {
-        return res.status(401).json({ error: "Lütfen giriş yapın!" });
-    }
-
-    if (fs.existsSync(appointmentsFile)) {
-        const appointments = JSON.parse(fs.readFileSync(appointmentsFile, "utf-8"));
-        const userAppointments = appointments.filter(a => a.username === req.session.username);
-        res.json(userAppointments);
-    } else {
-        res.json([]);
-    }
-});
-
-// Yeni randevu kaydetme
-app.post('/randevu', (req, res) => {
-    console.log('Session:', req.session); // Oturum detaylarını logla
-    if (!req.session.username) {
-        return res.status(401).json({ error: "Lütfen giriş yapın!" });
-    }
-
-    const { name, surname, date, time, description } = req.body;
-    const id = Date.now().toString(); // Randevuya benzersiz bir ID veriyoruz.
-    const username = req.session.username;
-    const newAppointment = { id, name, surname, date, time, description, username };
-
-    let appointments = [];
-    if (fs.existsSync(appointmentsFile)) {
-        appointments = JSON.parse(fs.readFileSync(appointmentsFile, "utf-8"));
-    }
-    appointments.push(newAppointment);
-    fs.writeFileSync(appointmentsFile, JSON.stringify(appointments, null, 2));
-
-    res.json({ message: "Başarılı" });
-});
-
-// Randevu silme
-app.delete('/randevu/:id', (req, res) => {
-    const id = req.params.id;
-    if (!fs.existsSync(appointmentsFile)) return res.status(404).send('Randevu bulunamadı');
-
-    let appointments = JSON.parse(fs.readFileSync(appointmentsFile, "utf-8"));
-    const initialLength = appointments.length;
-    appointments = appointments.filter(appointment => appointment.id !== id);
-
-    if (appointments.length < initialLength) {
-        fs.writeFileSync(appointmentsFile, JSON.stringify(appointments, null, 2));
-        res.sendStatus(200);
-    } else {
-        res.status(404).send('Randevu bulunamadı');
-    }
-});
-
-// Kullanıcı oturumdan cıkınca bunu yap -- bu kodu çıkış yap diye bir yere bağla !!
-app.post('/logout', (req, res) => {
-    req.session.destroy(err => {
-        if (err) {
-            return res.status(500).json({ error: "Oturum sonlandırılamadı!" });
+// Kullanıcı Kaydı
+app.post('/api/register', async (req, res) => {
+    try {
+        const { name, surname, username, password } = req.body;
+        
+        // Şifreyi hashle
+        const hashedPassword = await bcrypt.hash(password, 10);
+        
+        // Kullanıcıyı veritabanına ekle
+        const [result] = await db.execute(
+            'INSERT INTO users (name, surname, username, password) VALUES (?, ?, ?, ?)',
+            [name, surname, username, hashedPassword]
+        );
+        
+        res.status(201).json({ message: 'Kullanıcı başarıyla kaydedildi' });
+    } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ message: 'Bu kullanıcı adı zaten kullanılıyor' });
         }
-        res.json({ message: "Başarıyla çıkış yaptınız!" });
-    });
+        res.status(500).json({ message: 'Kullanıcı kaydı sırasında hata oluştu' });
+    }
 });
 
-// Sunucu başlatma
-app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
+// Kullanıcı Girişi
+app.post('/api/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        
+        // Kullanıcıyı bul
+        const [users] = await db.execute(
+            'SELECT * FROM users WHERE username = ?',
+            [username]
+        );
+        
+        if (users.length === 0) {
+            return res.status(401).json({ message: 'Geçersiz kullanıcı adı veya şifre' });
+        }
+        
+        const user = users[0];
+        const validPassword = await bcrypt.compare(password, user.password);
+        
+        if (!validPassword) {
+            return res.status(401).json({ message: 'Geçersiz kullanıcı adı veya şifre' });
+        }
+        
+        // Token oluştur
+        const token = jwt.sign(
+            { userId: user.id, username: user.username, name: user.name, surname: user.surname },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+        
+        // Token'ı cookie olarak kaydet
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 24 * 60 * 60 * 1000 // 24 saat
+        });
+        
+        res.json({ 
+            message: 'Giriş başarılı',
+            user: {
+                name: user.name,
+                surname: user.surname
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Giriş sırasında hata oluştu' });
+    }
+});
+
+// Randevu Oluştur
+app.post('/api/appointments', authenticateToken, async (req, res) => {
+    try {
+        const { name, surname, date, time, description } = req.body;
+        
+        const [result] = await db.execute(
+            'INSERT INTO appointments (name, surname, date, time, description, user_id) VALUES (?, ?, ?, ?, ?, ?)',
+            [name, surname, date, time, description, req.user.userId]
+        );
+        
+        res.status(201).json({ message: 'Randevu başarıyla oluşturuldu' });
+    } catch (error) {
+        res.status(500).json({ message: 'Randevu oluşturulurken hata oluştu' });
+    }
+});
+
+// Randevuları Listele
+app.get('/api/appointments', authenticateToken, async (req, res) => {
+    try {
+        const [appointments] = await db.execute(
+            'SELECT * FROM appointments WHERE user_id = ?',
+            [req.user.userId]
+        );
+        res.json(appointments);
+    } catch (error) {
+        res.status(500).json({ message: 'Randevular getirilirken hata oluştu' });
+    }
+});
+
+// Randevu Sil
+app.delete('/api/appointments/:id', authenticateToken, async (req, res) => {
+    try {
+        // Önce randevunun bu kullanıcıya ait olduğunu kontrol et
+        const [appointment] = await db.execute(
+            'SELECT * FROM appointments WHERE id = ? AND user_id = ?',
+            [req.params.id, req.user.userId]
+        );
+
+        if (appointment.length === 0) {
+            return res.status(404).json({ message: 'Randevu bulunamadı veya bu işlem için yetkiniz yok' });
+        }
+
+        const [result] = await db.execute(
+            'DELETE FROM appointments WHERE id = ? AND user_id = ?',
+            [req.params.id, req.user.userId]
+        );
+        
+        res.json({ message: 'Randevu başarıyla silindi' });
+    } catch (error) {
+        res.status(500).json({ message: 'Randevu silinirken bir hata oluştu' });
+    }
+});
+
+// Çıkış Yap
+app.post('/api/logout', (req, res) => {
+    res.clearCookie('token');
+    res.json({ message: 'Başarıyla çıkış yapıldı' });
+});
+
+app.listen(PORT, () => {
+    console.log(`Sunucu ${PORT} portunda çalışıyor`);
 });

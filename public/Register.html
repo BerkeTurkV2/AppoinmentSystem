@@ -34,13 +34,13 @@
         <form>
             <h2 class="text-center mb-4">Kayıt Ol</h2>
             <div class="mb-3">
-                <label for="firstName" class="form-label fs-5">İsim</label>
-                <input type="text" class="form-control" id="firstName" name="firstName" placeholder="İsminizi girin"
+                <label for="name" class="form-label fs-5">İsim</label>
+                <input type="text" class="form-control" id="name" name="name" placeholder="İsminizi girin"
                     required>
             </div>
             <div class="mb-3">
-                <label for="lastName" class="form-label fs-5">Soyisim</label>
-                <input type="text" class="form-control" id="lastName" name="lastName" placeholder="Soyisminizi girin"
+                <label for="surname" class="form-label fs-5">Soyisim</label>
+                <input type="text" class="form-control" id="surname" name="surname" placeholder="Soyisminizi girin"
                     required>
             </div>
             <div class="mb-3">
@@ -62,32 +62,34 @@
     <script>
         const form = document.querySelector("form");
         const errorMessage = document.getElementById("error-message");
-
-        form.addEventListener("submit", async (e) => {
+    
+        form.addEventListener("submit", function (e) {
             e.preventDefault();
-
+    
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
-
-            try {
-                const response = await fetch("/register", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(data),
-                });
-
-                if (!response.ok) {
-                    const { error } = await response.json();
-                    errorMessage.textContent = error;
-                    return;
+    
+            fetch('/api/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message === 'Kullanıcı başarıyla kaydedildi') {
+                    window.location.href = "/Login.html";
+                } else {
+                    errorMessage.textContent = data.message || "Kayıt başarısız.";
                 }
-
-                window.location.href = "/Login.html";
-            } catch (error) {
-                errorMessage.textContent = "Bir hata oluştu. Lütfen tekrar deneyin.";
-            }
+            })
+            .catch(error => {
+                errorMessage.textContent = "Bir hata oluştu: " + error.message;
+            });
         });
     </script>
+    
 </body>
 
 </html>
