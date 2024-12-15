@@ -34,13 +34,13 @@
         <form>
             <h2 class="text-center mb-4">Kayıt Ol</h2>
             <div class="mb-3">
-                <label for="firstName" class="form-label fs-5">İsim</label>
-                <input type="text" class="form-control" id="firstName" name="firstName" placeholder="İsminizi girin"
+                <label for="name" class="form-label fs-5">İsim</label>
+                <input type="text" class="form-control" id="name" name="name" placeholder="İsminizi girin"
                     required>
             </div>
             <div class="mb-3">
-                <label for="lastName" class="form-label fs-5">Soyisim</label>
-                <input type="text" class="form-control" id="lastName" name="lastName" placeholder="Soyisminizi girin"
+                <label for="surname" class="form-label fs-5">Soyisim</label>
+                <input type="text" class="form-control" id="surname" name="surname" placeholder="Soyisminizi girin"
                     required>
             </div>
             <div class="mb-3">
@@ -69,20 +69,24 @@
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
     
-            const xhr = new XMLHttpRequest();
-            xhr.open("POST", "/register", true);
-            xhr.setRequestHeader("Content-Type", "application/json");
-            xhr.onreadystatechange = function () {
-                if (xhr.readyState === 4) {
-                    if (xhr.status === 200) {
-                        window.location.href = "/Login.html";
-                    } else {
-                        const response = JSON.parse(xhr.responseText);
-                        errorMessage.textContent = response.error || "Bir hata oluştu.";
-                    }
+            fetch('/api/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message === 'Kullanıcı başarıyla kaydedildi') {
+                    window.location.href = "/Login.html";
+                } else {
+                    errorMessage.textContent = data.message || "Kayıt başarısız.";
                 }
-            };
-            xhr.send(JSON.stringify(data));
+            })
+            .catch(error => {
+                errorMessage.textContent = "Bir hata oluştu: " + error.message;
+            });
         });
     </script>
     

@@ -42,7 +42,7 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
+                <ul class="navbar-nav me-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="#" onclick="showPage('main')">Ana Sayfa</a>
                     </li>
@@ -53,6 +53,7 @@
                         <a class="nav-link" href="#" onclick="showPage('newAppoinment')">Yeni Randevu</a>
                     </li>
                 </ul>
+                <button class="btn btn-outline-danger" onclick="logout()">Çıkış Yap</button>
             </div>
         </div>
     </nav>
@@ -60,7 +61,9 @@
     <!-- Sayfaların bilgi ksıımalrı -->
     <div class="container mt-4">
         <div id="main" class="page">
-            <h1>Hoşgeldin..</h1>
+            <div class="alert alert-success" role="alert">
+                Hoşgeldin <span id="userFullName"></span>!
+            </div>
         </div>
         <div id="appoinment" class="page" style="display: none;">
             <h1>Randevularım</h1>
@@ -127,87 +130,131 @@
             const form = document.getElementById('appointment-form');
             if (form) {
                 form.addEventListener('submit', function (event) {
-
+                    event.preventDefault();
                     const name = document.getElementById('name').value;
                     const surname = document.getElementById('surname').value;
                     const date = document.getElementById('date').value;
                     const time = document.getElementById('time').value;
                     const description = document.getElementById('description').value;
 
-                    const xhr = new XMLHttpRequest();
-                    xhr.open('POST', '/randevu', true);
-                    xhr.setRequestHeader('Content-Type', 'application/json');
-                    xhr.onreadystatechange = function () {
-                        if (xhr.readyState === 4) {
-                            if (xhr.status === 200) {
-                                form.reset();
-                                //document.getElementById('appointment-form').reset();
-                                getAppointments();
-                                showPage('main');
-                            } else {
-                                console.error("Hata:", xhr.responseText);
-                            }
+                    fetch('/api/appointments', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ name, surname, date, time, description }),
+                        credentials: 'include'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.message === 'Randevu başarıyla oluşturuldu') {
+                            form.reset();
+                            showPage('appoinment'); // Randevularım sayfasına yönlendir
+                            getAppointments(); // Randevu listesini güncelle
+                        } else {
+                            console.error("Hata:", data.message);
                         }
-                    };
-                    xhr.onerror = function () {
-                        console.error("Bir ağ hatası oluştu!");
-                    };
-                    xhr.send(JSON.stringify({ name, surname, date, time, description }));
+                    })
+                    .catch(error => {
+                        console.error("Bir ağ hatası oluştu:", error);
+                    });
                 });
+            }
+
+            // Kullanıcı adı ve soyadını göster
+            const userName = localStorage.getItem('userName');
+            const userSurname = localStorage.getItem('userSurname');
+            const userFullName = document.getElementById('userFullName');
+            if (userName && userSurname) {
+                userFullName.textContent = userName + ' ' + userSurname;
             }
         });
 
-
-
         // Randevuları GET ile alıp sayfada göster
         function getAppointments() {
-            const xhr = new XMLHttpRequest();
-            xhr.open('GET', '/randevular', true);
-            xhr.onreadystatechange = function () {
-                if (xhr.readyState === 4) {
-                    if (xhr.status === 200) {
-                        const data = JSON.parse(xhr.responseText);
-                        const appointmentsList = document.querySelector('#appointments-list tbody');
-                        appointmentsList.innerHTML = '';
+            fetch('/api/appointments', {
+                method: 'GET',
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(data => {
+                const appointmentsList = document.querySelector('#appointments-list tbody');
+                appointmentsList.innerHTML = '';
 
-                        data.forEach(appointment => {
-                            const row = document.createElement('tr');
-                            row.innerHTML = `
+                data.forEach(appointment => {
+                    // Tarih formatını düzenle
+                    const date = new Date(appointment.date);
+                    const formattedDate = date.toLocaleDateString('tr-TR', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                    });
+
+                    // Saat formatını düzenle
+                    const time = appointment.time.substring(0, 5); // "HH:mm" formatına çevir
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
                         <td>${appointment.name}</td>
                         <td>${appointment.surname}</td>
-                        <td>${appointment.date}</td>
-                        <td>${appointment.time}</td>
+                        <td>${formattedDate}</td>
+                        <td>${time}</td>
                         <td>${appointment.description}</td>
-                        <button type="button" class="btn btn-danger btn-sm ms-2 mb-2 mt-2" onclick="deleteAppointment('${appointment.id}')">
-                            🗑️
-                        </button>
+                        <td>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="deleteAppointment('${appointment.id}')">
+                                🗑️
+                            </button>
+                        </td>
                     `;
-                            appointmentsList.appendChild(row);
-                        });
-                    } else {
-                        console.error("Hata:", xhr.responseText);
-                    }
-                }
-            };
-            xhr.send();
+                    appointmentsList.appendChild(row);
+                });
+            })
+            .catch(error => {
+                console.error("Hata:", error);
+            });
         }
 
         // Randevu silme fonksiyonu
         function deleteAppointment(id) {
-            const xhr = new XMLHttpRequest();
-            xhr.open('DELETE', `/randevu/${id}`, true);
-            xhr.onreadystatechange = function () {
-                if (xhr.readyState === 4) {
-                    if (xhr.status === 200) {
-                        getAppointments(); // Randevu listesini güncelle
-                    } else {
-                        console.error("Randevu silinemedi.");
-                    }
+            fetch(`/api/appointments/${id}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            })
+            .then(response => {
+                if (response.ok) {
+                    getAppointments();
+                } else {
+                    console.error("Randevu silinirken bir hata oluştu");
                 }
-            };
-            xhr.send();
+            })
+            .catch(error => {
+                console.error("Bir ağ hatası oluştu:", error);
+            });
         }
 
+        // Çıkış yapma fonksiyonu
+        function logout() {
+            fetch('/api/logout', {
+                method: 'POST',
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message === 'Başarıyla çıkış yapıldı') {
+                    // "Beni Hatırla" seçili değilse tüm localStorage'ı temizle
+                    const rememberedUser = localStorage.getItem('rememberedUser');
+                    localStorage.clear();
+                    // Eğer hatırlanan kullanıcı varsa, geri yükle
+                    if (rememberedUser) {
+                        localStorage.setItem('rememberedUser', rememberedUser);
+                    }
+                    window.location.href = '/Login.html';
+                }
+            })
+            .catch(error => {
+                console.error("Çıkış yaparken bir hata oluştu:", error);
+            });
+        }
     </script>
 
 </body>
